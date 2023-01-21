@@ -1,7 +1,7 @@
 import { getFormData, renderSearchFormBlock } from './search-form.js'
 import { renderSearchStubBlock } from './search-results.js'
 import { getFavoritesAmount, getUserData, renderUserBlock, User } from './user.js'
-import { renderToast } from './lib.js'
+import { renderBlock, renderToast } from './lib.js'
 
 window.addEventListener('DOMContentLoaded', () => {
   localStorage.setItem(
@@ -23,9 +23,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
   renderSearchFormBlock()
   renderSearchStubBlock()
-  renderToast(
-    { text: 'Это пример уведомления. Используйте его при необходимости', type: 'success' },
-    { name: 'Понял', handler: () => { console.log('Уведомление закрыто') } }
-  )
+  if (typeof user === 'string') {
+    renderToast(
+      {
+        text: `${user}`,
+        type: 'success',
+      },
+      {
+        name: 'Понял',
+        handler: () => {
+          console.log('Уведомление закрыто');
+        },
+      }
+    );
+    renderBlock('user-block', `<br/><p>${user}</p>`);
+  }
   getFormData()
 })
