@@ -1,32 +1,58 @@
-import { renderBlock } from './lib.js'
+import {
+  renderBlock, dateToUnixStamp,
+  responseToJson
+} from './lib.js'
+import { renderSearchResultsBlock } from './search-results.js';
 
 interface SearchFormData {
   city: string
   checkInDate: Date
   checkOutDate: Date
   maxPricePerDay: number
-} 
+  coordinates: string
+}
+
+export interface Place {
+  id: number;
+  image: string;
+  name: string;
+  description: string;
+  remoteness: number;
+  bookedDates: number[];
+  price: number;
+}
 
 export function getFormData(): void {
   const form = document.getElementById('form') as HTMLFormElement;
   form.addEventListener('submit', (e: SubmitEvent) => {
     e.preventDefault();
-    const inputCity  = document.getElementById('city') as HTMLInputElement
+    const inputCity = document.getElementById('city') as HTMLInputElement
     const inputCheckInDate = document.getElementById('check-in-date') as HTMLInputElement
     const inputCheckOutDate = document.getElementById('check-out-date') as HTMLInputElement
     const inputMaxPricePerDay = document.getElementById('max-price') as HTMLInputElement
+    const coordinates = document.getElementById('coordinates') as HTMLInputElement;
     const formData: SearchFormData = {
       city: inputCity.value,
       checkInDate: new Date(inputCheckInDate.value),
       checkOutDate: new Date(inputCheckOutDate.value),
-      maxPricePerDay: Number(inputMaxPricePerDay.value)
+      maxPricePerDay: inputMaxPricePerDay.value ? +inputMaxPricePerDay.value : null,
+      coordinates: coordinates.value,
     }
-  getSearchData(formData);
+    getSearchData(formData).then((places: Place[]) => renderSearchResultsBlock(places));
   })
 }
 
-export function getSearchData(data: SearchFormData): void {
- console.log(data);
+export function getSearchData(data: SearchFormData) {
+  let url: string =
+    'http://localhost:3030/places?' +
+    `checkInDate=${dateToUnixStamp(data.checkInDate)}&` +
+    `checkOutDate=${dateToUnixStamp(data.checkOutDate)}&` +
+    `coordinates=${data.coordinates}`;
+
+  if (data.maxPricePerDay != null) {
+    url += `&maxPrice=${data.maxPricePerDay}`;
+  }
+  return responseToJson(fetch(url));
 }
 
 export function renderSearchFormBlock(checkInDate: string = '', checkOutDate: string = '') {
@@ -54,7 +80,7 @@ export function renderSearchFormBlock(checkInDate: string = '', checkOutDate: st
     let checkOutDate = new Date(checkOutDay)
     let yearOut = new Date(checkOutDate).getFullYear();
     let monthOut = new Date(checkOutDate).getMonth()
-    let dayOut = new Date(checkOutDate).getDate();  
+    let dayOut = new Date(checkOutDate).getDate();
     return `${yearOut}-${monthOut}-${dayOut}`
   }
 
@@ -81,7 +107,7 @@ export function renderSearchFormBlock(checkInDate: string = '', checkOutDate: st
           <div>
             <label for="city">Город</label>
             <input id="city" type="text" disabled value="Санкт-Петербург" />
-            <input type="hidden" disabled value="59.9386,30.3141" />
+            <input type="hidden" id="coordinates" name="coordinates" disabled value="59.9386,30.3141" />
           </div>
           <!--<div class="providers">
             <label><input type="checkbox" name="provider" value="homy" checked /> Homy</label>
@@ -110,4 +136,4 @@ export function renderSearchFormBlock(checkInDate: string = '', checkOutDate: st
     `
   )
 }
-  
+
