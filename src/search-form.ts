@@ -1,23 +1,29 @@
 import {
-  renderBlock, dateToUnixStamp,
-  responseToJson
-} from './lib.js'
+  renderBlock,
+  getISODate,
+  getLastDayOfMonth,
+  dateToUnixStamp,
+  responseToJson,
+  calculateDifferenceInDays
+} from './lib.js';
 import { renderSearchResultsBlock } from './search-results.js';
+import { FlatRentSdk, iFlat, iParams } from './sdk/flat-rent-sdk.js';
+
+export const flatSDK = new FlatRentSdk();
 
 interface SearchFormData {
-  city: string
-  checkInDate: Date
-  checkOutDate: Date
-  maxPricePerDay: number
-  coordinates: string
+  city: string;
+  checkin: Date;
+  checkout: Date;
+  maxprice: number | null;
+  coordinates: string;
 }
-
 export interface Place {
-  id: number;
+  id: number | string;
   image: string;
   name: string;
   description: string;
-  remoteness: number;
+  remoteness?: number;
   bookedDates: number[];
   price: number;
 }
@@ -26,77 +32,79 @@ export function getFormData(): void {
   const form = document.getElementById('form') as HTMLFormElement;
   form.addEventListener('submit', (e: SubmitEvent) => {
     e.preventDefault();
-    const inputCity = document.getElementById('city') as HTMLInputElement
-    const inputCheckInDate = document.getElementById('check-in-date') as HTMLInputElement
-    const inputCheckOutDate = document.getElementById('check-out-date') as HTMLInputElement
-    const inputMaxPricePerDay = document.getElementById('max-price') as HTMLInputElement
-    const coordinates = document.getElementById('coordinates') as HTMLInputElement;
-    const formData: SearchFormData = {
-      city: inputCity.value,
-      checkInDate: new Date(inputCheckInDate.value),
-      checkOutDate: new Date(inputCheckOutDate.value),
-      maxPricePerDay: inputMaxPricePerDay.value ? +inputMaxPricePerDay.value : null,
+    const city: HTMLInputElement = document.getElementById(
+      'city'
+    ) as HTMLInputElement,
+      checkin: HTMLInputElement = document.getElementById(
+        'check-in-date'
+      ) as HTMLInputElement,
+      checkout: HTMLInputElement = document.getElementById(
+        'check-out-date'
+      ) as HTMLInputElement,
+      maxprice: HTMLInputElement = document.getElementById(
+        'max-price'
+      ) as HTMLInputElement,
+      coordinates: HTMLInputElement = document.getElementById(
+        'coordinates'
+      ) as HTMLInputElement;
+    const data: SearchFormData = {
+      city: city.value,
+      checkin: new Date(checkin.value),
+      checkout: new Date(checkout.value),
+      maxprice: maxprice.value ? +maxprice.value : null,
       coordinates: coordinates.value,
+    };
+    const sdkData:iParams = {
+      city: city.value,
+      checkInDate: new Date(checkin.value),
+      checkOutDate: new Date(checkout.value),
+      priceLimit: maxprice.value ? +maxprice.value : null
     }
-    getSearchData(formData).then((places: Place[]) => renderSearchResultsBlock(places));
-  })
+    
+    search(data).then((places: Place[]) =>{ 
+      places = places.map((place:Place)=>{
+        place.price = place.price*calculateDifferenceInDays(data.checkin, data.checkout);
+        return place;
+      });
+      flatSDK.search(sdkData).then((sdkpl:iFlat[]) => {
+        const sdkPlaces:Place[] = sdkpl.map((flat:iFlat)=>{
+          return {
+            id: flat.id,
+            name: flat.title,
+            image: flat.photos[0],
+            description: flat.details,
+            price: flat.totalPrice,
+          } as Place;
+        });
+        places.push(...sdkPlaces);
+        renderSearchResultsBlock(places);
+      });
+    });
+  });
 }
-
-export function getSearchData(data: SearchFormData) {
+function search(data: SearchFormData) {
   let url: string =
     'http://localhost:3030/places?' +
-    `checkInDate=${dateToUnixStamp(data.checkInDate)}&` +
-    `checkOutDate=${dateToUnixStamp(data.checkOutDate)}&` +
+    `checkInDate=${dateToUnixStamp(data.checkin)}&` +
+    `checkOutDate=${dateToUnixStamp(data.checkout)}&` +
     `coordinates=${data.coordinates}`;
 
-  if (data.maxPricePerDay != null) {
-    url += `&maxPrice=${data.maxPricePerDay}`;
+  if (data.maxprice != null) {
+    url += `&maxPrice=${data.maxprice}`;
   }
+
   return responseToJson(fetch(url));
 }
 
-export function renderSearchFormBlock(checkInDate: string = '', checkOutDate: string = '') {
-  const getToday = () => {
-    let today = new Date();
-    let yearOut = today.getFullYear();
-    let monthOut = today.getMonth() + 1;
-    let dayOut = today.getDate();
-    return `${yearOut}-${monthOut}-${dayOut}`
-  }
-
-  const getDefaultCheckInDate = () => {
-    let today = new Date();
-    let tommorow = today.setDate(today.getDate() + 1);
-    let yearOut = new Date(tommorow).getFullYear();
-    let monthOut = new Date(tommorow).getMonth() + 1;
-    let dayOut = new Date(tommorow).getDate();
-    return `${yearOut}-${monthOut}-${dayOut}`
-  }
-
-  const getDefaultCheckOutDate = () => {
-    let [year, month, day] = getDefaultCheckInDate().split('-');
-    let lastDate = new Date(+year, +month, +day);
-    let checkOutDay = lastDate.setDate(lastDate.getDate() + 2);
-    let checkOutDate = new Date(checkOutDay)
-    let yearOut = new Date(checkOutDate).getFullYear();
-    let monthOut = new Date(checkOutDate).getMonth()
-    let dayOut = new Date(checkOutDate).getDate();
-    return `${yearOut}-${monthOut}-${dayOut}`
-  }
-
-  const getLastDayOfNextMonth = () => {
-    let today = new Date();
-    let nextMonth = today.setMonth(today.getMonth() + 2);
-    let getMonth = new Date(nextMonth).getMonth()
-
-    let lastDay = new Date(today.getFullYear(), getMonth, 0)
-
-    let yearOut = new Date(lastDay).getFullYear();
-    let monthOut = new Date(lastDay).getMonth() + 1;
-    let dayOut = new Date(lastDay).getDate();
-
-    return `${yearOut}-${monthOut}-${dayOut}`
-  }
+export function renderSearchFormBlock(checkin = '', checkout = ''): void {
+  const minDate = new Date(),
+    maxDate = new Date(),
+    checkinDefaultDate = new Date(),
+    checkoutDefaultDate = new Date();
+  maxDate.setMonth(maxDate.getMonth() + 1);
+  maxDate.setDate(getLastDayOfMonth(maxDate.getFullYear(), maxDate.getMonth()));
+  checkinDefaultDate.setDate(checkinDefaultDate.getDate() + 1);
+  checkoutDefaultDate.setDate(checkoutDefaultDate.getDate() + 3);
 
   renderBlock(
     'search-form-block',
@@ -106,7 +114,7 @@ export function renderSearchFormBlock(checkInDate: string = '', checkOutDate: st
         <div class="row">
           <div>
             <label for="city">Город</label>
-            <input id="city" type="text" disabled value="Санкт-Петербург" />
+            <input id="city" name="city" type="text" disabled value="Санкт-Петербург" />
             <input type="hidden" id="coordinates" name="coordinates" disabled value="59.9386,30.3141" />
           </div>
           <!--<div class="providers">
@@ -117,11 +125,19 @@ export function renderSearchFormBlock(checkInDate: string = '', checkOutDate: st
         <div class="row">
           <div>
             <label for="check-in-date">Дата заезда</label>
-            <input id="check-in-date" type="date" value="${checkInDate ? checkInDate : getDefaultCheckInDate()}" min="${getToday()}" max="${getLastDayOfNextMonth()}" name="checkin" />
+            <input id="check-in-date" type="date" value="${
+  checkin ? checkin : getISODate(checkinDefaultDate)
+}" min="${getISODate(minDate)}" max="${getISODate(
+  maxDate
+)}" name="checkin" />
           </div>
           <div>
             <label for="check-out-date">Дата выезда</label>
-            <input id="check-out-date" type="date" value="${checkOutDate ? checkOutDate : getDefaultCheckOutDate()}" min="${getToday()}" max="${getLastDayOfNextMonth()}" name="checkout" />
+            <input id="check-out-date" type="date" value="${
+  checkout ? checkout : getISODate(checkoutDefaultDate)
+}" min="${getISODate(minDate)}" max="${getISODate(
+  maxDate
+)}" name="checkout" />
           </div>
           <div>
             <label for="max-price">Макс. цена суток</label>
@@ -134,6 +150,5 @@ export function renderSearchFormBlock(checkInDate: string = '', checkOutDate: st
       </fieldset>
     </form>
     `
-  )
+  );
 }
-

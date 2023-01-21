@@ -1,31 +1,11 @@
-import { getFormData, renderSearchFormBlock } from './search-form.js';
+import { renderSearchFormBlock, getFormData } from './search-form.js';
 import { renderSearchStubBlock } from './search-results.js';
-import { getFavoritesAmount, getUserData, renderUserBlock, User } from './user.js';
-import { renderBlock, renderToast } from './lib.js';
+import { renderUserInfo } from './user.js';
 window.addEventListener('DOMContentLoaded', () => {
-    localStorage.setItem('user', JSON.stringify({ userName: 'Den Warren', avatarUrl: './img/avatar.png' }));
-    localStorage.setItem('favoritesAmount', JSON.stringify(1));
-    let user = getUserData(localStorage.getItem('user'));
-    let favoritesAmount = getFavoritesAmount(localStorage.getItem('favoritesAmount'));
-    if (user instanceof User && favoritesAmount === 0) {
-        renderUserBlock(user.userName, user.avatarUrl);
-    }
-    if (user instanceof User && favoritesAmount) {
-        renderUserBlock(user.userName, user.avatarUrl, favoritesAmount);
-    }
+    localStorage.setItem('user', JSON.stringify({ username: 'Den Warren', avatarUrl: '/img/avatar.png' }));
+    renderUserInfo();
     renderSearchFormBlock();
     renderSearchStubBlock();
-    if (typeof user === 'string') {
-        renderToast({
-            text: `${user}`,
-            type: 'success',
-        }, {
-            name: 'Понял',
-            handler: () => {
-                console.log('Уведомление закрыто');
-            },
-        });
-        renderBlock('user-block', `<br/><p>${user}</p>`);
-    }
     getFormData();
 });
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaW5kZXguanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi9zcmMvaW5kZXgudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsT0FBTyxFQUFFLHFCQUFxQixFQUFFLFdBQVcsRUFBRSxNQUFNLGtCQUFrQixDQUFDO0FBQ3RFLE9BQU8sRUFBRSxxQkFBcUIsRUFBRSxNQUFNLHFCQUFxQixDQUFDO0FBQzVELE9BQU8sRUFBRSxjQUFjLEVBQUUsTUFBTSxXQUFXLENBQUM7QUFFM0MsTUFBTSxDQUFDLGdCQUFnQixDQUFDLGtCQUFrQixFQUFFLEdBQUcsRUFBRTtJQUMvQyxZQUFZLENBQUMsT0FBTyxDQUNsQixNQUFNLEVBQ04sSUFBSSxDQUFDLFNBQVMsQ0FBQyxFQUFFLFFBQVEsRUFBRSxZQUFZLEVBQUUsU0FBUyxFQUFFLGlCQUFpQixFQUFFLENBQUMsQ0FDekUsQ0FBQztJQUVGLGNBQWMsRUFBRSxDQUFDO0lBQ2pCLHFCQUFxQixFQUFFLENBQUM7SUFDeEIscUJBQXFCLEVBQUUsQ0FBQztJQUN4QixXQUFXLEVBQUUsQ0FBQztBQUNoQixDQUFDLENBQUMsQ0FBQyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IHJlbmRlclNlYXJjaEZvcm1CbG9jaywgZ2V0Rm9ybURhdGEgfSBmcm9tICcuL3NlYXJjaC1mb3JtLmpzJztcbmltcG9ydCB7IHJlbmRlclNlYXJjaFN0dWJCbG9jayB9IGZyb20gJy4vc2VhcmNoLXJlc3VsdHMuanMnO1xuaW1wb3J0IHsgcmVuZGVyVXNlckluZm8gfSBmcm9tICcuL3VzZXIuanMnO1xuXG53aW5kb3cuYWRkRXZlbnRMaXN0ZW5lcignRE9NQ29udGVudExvYWRlZCcsICgpID0+IHtcbiAgbG9jYWxTdG9yYWdlLnNldEl0ZW0oXG4gICAgJ3VzZXInLFxuICAgIEpTT04uc3RyaW5naWZ5KHsgdXNlcm5hbWU6ICdEZW4gV2FycmVuJywgYXZhdGFyVXJsOiAnL2ltZy9hdmF0YXIucG5nJyB9KVxuICApO1xuICBcbiAgcmVuZGVyVXNlckluZm8oKTtcbiAgcmVuZGVyU2VhcmNoRm9ybUJsb2NrKCk7XG4gIHJlbmRlclNlYXJjaFN0dWJCbG9jaygpO1xuICBnZXRGb3JtRGF0YSgpO1xufSk7Il19
